@@ -1,0 +1,4 @@
+appName: true
+route: steve
+addr: localhost:8081
+log-level: debug

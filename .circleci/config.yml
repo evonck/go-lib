@@ -1,0 +1,46 @@
+version: 2
+jobs:
+  test:
+    working_directory: /go/src/bitbucket.org/onekloud/go-lib
+
+    docker:
+      - image: circleci/golang:1.8
+    steps:
+      - checkout
+
+      - run:
+          name: Slack Info
+          command: |
+            curl -X POST --data-urlencode 'payload={ "channel": "#circleci", "username": "CircleCi", "attachments": [{"color": "#439FE0", "pretext": "Job Started for <https://circleci.com/bb/onekloud/'"$CIRCLE_PROJECT_REPONAME"' | '"$CIRCLE_PROJECT_REPONAME"' >","title": " '"$CIRCLE_BRANCH"' ","title_link": "https://circleci.com/bb/onekloud/'"$CIRCLE_PROJECT_REPONAME"'/tree/'"$CIRCLE_BRANCH"'","text": "Build number '"$CIRCLE_BUILD_NUM"' ","fields": [{"title": "Status", "value": "<'"$CIRCLE_BUILD_URL"' | Started >", "short": true}]}], "icon_url": "https://s3.amazonaws.com/assets-onekloud/onekloud/jenkins/circleci.png" }' ${SLACK_HOOK}
+
+      - run: go get github.com/govend/govend
+
+      - run:
+          name: Get dependencies
+          command: |
+            git config --global url."git@bitbucket.org:".insteadOf "https://bitbucket.org/";
+            git config --global url."git@github.com:".insteadOf "https://gihthub.com/";
+            for d in */ ; do (cd $d; govend -v); done
+
+      - run:
+          name: Test
+          command: |
+            for d in */ ; do (cd $d; go test); done
+
+      - run:
+          name: Slack Info Success
+          command: |
+            curl -X POST --data-urlencode 'payload={ "channel": "#circleci", "username": "CircleCi",   "attachments": [{"color": "good", "pretext": "Test Done for <https://circleci.com/bb/onekloud/'"$CIRCLE_PROJECT_REPONAME"' | '"$CIRCLE_PROJECT_REPONAME"' >","title": " '"$CIRCLE_BRANCH"' ","title_link": "https://circleci.com/bb/onekloud/'"$CIRCLE_PROJECT_REPONAME"'/tree/'"$CIRCLE_BRANCH"'","text": "Build number '"$CIRCLE_BUILD_NUM"' ","fields": [{"title": "Status", "value": "<'"$CIRCLE_BUILD_URL"' | Success >", "short": true}]}], "icon_url": "https://s3.amazonaws.com/assets-onekloud/onekloud/jenkins/circleci.png" }' ${SLACK_HOOK}
+
+      - run:
+          name: Slack Info Fail
+          when: on_fail
+          command: |
+            curl -X POST --data-urlencode 'payload={ "channel": "#circleci", "username": "CircleCi",   "attachments": [{"color": "danger", "pretext":"Test Done for <https://circleci.com/bb/onekloud/'"$CIRCLE_PROJECT_REPONAME"' | '"$CIRCLE_PROJECT_REPONAME"' >","title": " '"$CIRCLE_BRANCH"' ","title_link": "https://circleci.com/bb/onekloud/'"$CIRCLE_PROJECT_REPONAME"'/tree/'"$CIRCLE_BRANCH"'","text": "Build number '"$CIRCLE_BUILD_NUM"' ","fields": [{"title": "Status", "value": "<'"$CIRCLE_BUILD_URL"' | Error >", "short": true}]}], "icon_url": "https://s3.amazonaws.com/assets-onekloud/onekloud/jenkins/circleci.png" }' ${SLACK_HOOK}
+
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - test:
+          context: org-global
